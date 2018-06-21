@@ -218,7 +218,7 @@ class Generator(nn.Module):
 		h6 = torch.cat((h6, h6z), 1)
 
 		h7 = self.deconv7(h6, output_size=(10, 3, 224, 224))
-		out = 10*self.tanh(h7)
+		out1 = 10*self.tanh(h7)
 
 		return out1
 
