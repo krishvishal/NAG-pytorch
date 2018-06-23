@@ -16,3 +16,8 @@ Network for Adversary Generation
 > evaluation demonstrates that perturbations crafted by our model (i) achieve state-of-the-art fooling rates, (ii)
 > exhibit wide variety and (iii) deliver excellent cross model generalizability. Our work can be deemed as an important
 > step in the process of inferring about the complex manifolds of adversarial perturbations.
+
+### Architecture
+
+![Architecture](https://github.com/val-iisc/nag/blob/master/extras/nag.png)
+
