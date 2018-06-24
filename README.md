@@ -48,8 +48,8 @@ Network for Adversary Generation
 * I suggest you to download the original Imagenet dataset for best results, the images downloaded using the imagenet_downloader.py script contain many missing images. 
 
 
+### Currently a WIP, due to lack of adequate compute resources.
 
-
-# Help
+### Help
 Referred to the author's repo, this project was made on the shoulders of giants.
 Official Repo: https://github.com/val-iisc/nag
