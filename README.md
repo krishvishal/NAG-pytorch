@@ -27,6 +27,13 @@ Network for Adversary Generation
 * generate_uap.py -> Generates perturbations
 * imagenet_downloader.py -> Downloads imagenet images for training and validating
 
+### Requirements 
+* pytorch
+* numpy
+* cv2
+* torchvision
+* scipy
+
 ### To do
 - [ ] Logging
 - [ ] Training the model
@@ -44,5 +51,5 @@ Network for Adversary Generation
 
 
 # Help
-Referred to the author's repo ,this project was made on the shoulders of giants.
+Referred to the author's repo, this project was made on the shoulders of giants.
 Official Repo: https://github.com/val-iisc/nag
