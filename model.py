@@ -103,7 +103,7 @@ class VirtualBatchNorm2d(Module):
 
 def make_z(shape, minval, maxval):
 
-	z = (minval - maxval) * torch.rand(shape) + maxval
+	z = minval + torch.rand(shape) * (maxval - 1)
 	return z
 
 class Generator(nn.Module):
@@ -130,7 +130,9 @@ class Generator(nn.Module):
 
 		self.linear1 = nn.Linear(100, self.gf_dim*7*4*4)
 		self.vbn1 = VirtualBatchNorm2d(self.gf_dim*7)
+		
 		self.deconv1 = nn.ConvTranspose2d(512, self.gf_dim*4, kernel_size=5, stride=2, padding=2)
+
 
 		self.deconv2 = nn.ConvTranspose2d(320, self.gf_dim*2, kernel_size=5, stride=2, padding=2)
 		self.vbn2 = VirtualBatchNorm2d(self.gf_dim*4)
@@ -148,18 +150,19 @@ class Generator(nn.Module):
 		self.vbn6 = nn.VirtualBatchNorm2d(self.gf_dim*1)
 
 		self.deconv7 = nn.ConvTranspose2d(72, 3, kernel_size=5, stride=1, padding=2)
+		self.vbn7 = nn.VirtualBatchNorm2d(self.gf_dim*1)
 		torch.nn.init.normal(self.deconv7.weight, std = self.out_stddev)
 		torch.nn.init.constant(self.deconv7.bias, 0.1)
 
 		self.tanh = nn.Tanh()
 
-	def forward(x):
+	def forward(self, ref_x, x):
 
 ##########################################################################################################
 #  Forward pass using reference batch                                                                    #
 ##########################################################################################################
 
-		z_ = self.linear(x)
+		z_ = self.linear(ref_x)
 		h0 = z_.view(-1, 64*7, 4, 4)
 		h0 = F.relu(h0)
 		h0, mean0, meansq0 = self.vbn1(h0, None, None)
@@ -167,14 +170,14 @@ class Generator(nn.Module):
 		h0 = torch.cat((h0, h0z), 1)
 
 		h1 = self.deconv1(h0)
-		h1 = F.relu(h1)
 		h1, mean1, meansq1 = self.vbn2(h1, None, None)
+		h1 = F.relu(h1)
 		h1z = make_z((self.batch_size, self.gf_dim, 7, 7), minval=-1., maxval=1.)
 		h1 = torch.cat((h1, h1z), 1)
 
 		h2 = self.deconv2(h1, output_size=(10, 128, 14, 14))
-		h2 = F.relu(h2)
 		h2, mean2, meansq2 = self.vbn3(h2, None, None)
+		h2 = F.relu(h2)
 		half = self.gf_dim // 2
 		if half == 0:
 			half = 1
@@ -182,8 +185,8 @@ class Generator(nn.Module):
 		h2 = torch.cat((h2, h2z), 1)
 
 		h3 = self.deconv3(h2, output_size=(10, 64, 28, 28))
+		h3, mean3, meansq3 = self.vbn4(h3, None, None)
 		h3 = F.relu(h3)
-		h3, mean3, meansq3 = self.vbn3(h3, None, None)
 		quarter = self.gf_dim // 4
 		if quarter == 0:
 			quarter = 1
@@ -191,8 +194,8 @@ class Generator(nn.Module):
 		h3 = torch.cat((h3, h3z), 1)
 
 		h4 = self.deconv4(h3, output_size=(10, 64, 56, 56))
+		h4, mean4, meansq4 = self.vbn5(h4, None, None)
 		h4 = F.relu(h4)
-		h4, mean4, meansq4 = self.vbn4(h4, None, None)
 		eighth = self.gf_dim // 8
 		if eighth == 0:
 			eighth = 1
@@ -200,8 +203,8 @@ class Generator(nn.Module):
 		h4 = torch.cat((h4, h4z), 1)
 
 		h5 = self.deconv5(h, output_size=(10, 64, 112, 112))
+		h5, mean5, meansq5 = self.vbn6(h5, None, None)
 		h5 = F.relu(h5)
-		h5, mean5, meansq5 = self.vbn5(h5, None, None)
 		sixteenth = self.gf_dim // 16
 		if sixteenth == 0:
 			sixteenth = 1
@@ -209,8 +212,8 @@ class Generator(nn.Module):
 		h5 = torch.cat((h5, h5z), 1)
 
 		h6 = self.deconv6(h5, output_size=(10, 64, 224, 224))
+		h6, mean6, meansq6 = self.vbn7(h6, None, None)
 		h6 = F.relu(h6)
-		h6, mean6, meansq6 = self.vbn6(h6, None, None)
 		sixteenth = self.gf_dim // 16
 		if sixteenth == 0:
 			sixteenth = 1
@@ -218,9 +221,7 @@ class Generator(nn.Module):
 		h6 = torch.cat((h6, h6z), 1)
 
 		h7 = self.deconv7(h6, output_size=(10, 3, 224, 224))
-		out1 = 10*self.tanh(h7)
-
-		return out1
+		out = 10*self.tanh(h7)
 
 
 
@@ -230,20 +231,20 @@ class Generator(nn.Module):
 		
 		z_ = self.linear(x)
 		h0 = z_.view(-1, 64*7, 4, 4)
-		h0 = F.relu(h0)
 		h0, _, _ = self.vbn1(h0, mean0, meansq0)
+		h0 = F.relu(h0)
 		h0z = make_z((self.batch_size, self.gf_dim, 4, 4), minval=-1., maxval=1.)
 		h0 = torch.cat((h0, h0z), 1)
 
 		h1 = self.deconv1(h0)
-		h1 = F.relu(h1)
 		h1, _, _ = self.vbn2(h1, mean1, meansq1)
+		h1 = F.relu(h1)
 		h1z = make_z((self.batch_size, self.gf_dim, 7, 7), minval=-1., maxval=1.)
 		h1 = torch.cat((h1, h1z), 1)
 
 		h2 = self.deconv2(h1, output_size=(10, 128, 14, 14))
-		h2 = F.relu(h2)
 		h2, _, _ = self.vbn3(h2, mean2, meansq2)
+		h2 = F.relu(h2)
 		half = self.gf_dim // 2
 		if half == 0:
 			half = 1
@@ -251,8 +252,8 @@ class Generator(nn.Module):
 		h2 = torch.cat((h2, h2z), 1)
 
 		h3 = self.deconv3(h2, output_size=(10, 64, 28, 28))
+		h3, _, _ = self.vbn4(h3, mean3, meansq3)
 		h3 = F.relu(h3)
-		h3, _, _ = self.vbn3(h3, mean3, meansq3)
 		quarter = self.gf_dim // 4
 		if quarter == 0:
 			quarter = 1
@@ -260,8 +261,8 @@ class Generator(nn.Module):
 		h3 = torch.cat((h3, h3z), 1)
 
 		h4 = self.deconv4(h3, output_size=(10, 64, 56, 56))
+		h4, _, _ = self.vbn5(h4, mean4, meansq4)
 		h4 = F.relu(h4)
-		h4, _, _ = self.vbn4(h4, mean4, meansq4)
 		eighth = self.gf_dim // 8
 		if eighth == 0:
 			eighth = 1
@@ -269,8 +270,8 @@ class Generator(nn.Module):
 		h4 = torch.cat((h4, h4z), 1)
 
 		h5 = self.deconv5(h, output_size=(10, 64, 112, 112))
+		h5, _, _ = self.vbn6(h5, mean5, meansq5)
 		h5 = F.relu(h5)
-		h5, _, _ = self.vbn5(h5, mean5, meansq5)
 		sixteenth = self.gf_dim // 16
 		if sixteenth == 0:
 			sixteenth = 1
@@ -278,8 +279,8 @@ class Generator(nn.Module):
 		h5 = torch.cat((h5, h5z), 1)
 
 		h6 = self.deconv6(h5, output_size=(10, 64, 224, 224))
+		h6, _, _ = self.vbn7(h6, mean6, meansq6)
 		h6 = F.relu(h6)
-		h6, _, _ = self.vbn6(h6, mean6, meansq6)
 		sixteenth = self.gf_dim // 16
 		if sixteenth == 0:
 			sixteenth = 1
